@@ -1,0 +1,86 @@
+---
+title: "Project"
+author: "Joe Backer, Elle Dodd, Dan Humphrey, Dan Peckham"
+date: "3/25/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	root.dir = "~/Documents/Stats2/pivotproject",
+	tidy = TRUE)
+```
+
+```{r data}
+library(haven)
+library(sandwich)
+library(stargazer)
+library(ggplot2)
+library(car)
+library(knitr)
+afghan <- read_dta("~/Documents/Stats2/pivotproject/afghandata.dta")
+```
+
+
+```{r}
+kable(round(cor(afghan[,c("f07_formal_school", "f07_nearest_scl", "f07_heads_child_cnt", "f07_girl_cnt", "f07_age_cnt", "f07_age_head_cnt", "f07_yrs_ed_head_cnt", "f07_jeribs_cnt", "f07_num_sheep_cnt", "f07_duration_village_cnt", "f07_farsi_cnt" ,"f07_tajik_cnt" , "f07_farmer_cnt","f07_num_ppl_hh_cnt")]), digits = 2))
+```
+
+none are more than 0.35.
+above magnitude 0.25 are:
+yrs head of household education and farmer -0.28,
+farsi and tajik -0.27,
+duration in village and age of household head 0.3, 
+sheep and jerobs 0.32.
+
+```{r}
+plot (afghan$f07_jeribs_cnt, afghan$f07_num_sheep_cnt)
+plot (afghan$f07_duration_village_cnt, afghan$f07_age_head_cnt)
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+r1 <- lm(f07_formal_school ~ f07_nearest_scl, data = afghan)
+r2 <- lm(f07_formal_school ~ f07_nearest_scl +  f07_girl_cnt + f07_age_cnt + f07_age_head_cnt + f07_num_sheep_cnt + f07_jeribs_cnt + f07_yrs_ed_head_cnt + f07_heads_child_cnt+f07_duration_village_cnt + f07_num_ppl_hh_cnt + f07_tajik_cnt + f07_farsi_cnt, data = afghan)
+p1 <- glm(f07_formal_school ~ f07_nearest_scl, data = afghan, family=binomial(link="probit"))
+p2 <- glm(f07_formal_school ~ f07_nearest_scl +  f07_girl_cnt + f07_age_cnt + f07_age_head_cnt + f07_num_sheep_cnt + f07_jeribs_cnt + f07_yrs_ed_head_cnt + f07_heads_child_cnt+f07_duration_village_cnt + f07_num_ppl_hh_cnt + f07_tajik_cnt + f07_farsi_cnt, data = afghan, family=binomial(link="probit"))
+stargazer(r1, r2,p1, p2,
+          omit.stat = c("f", "ser", "aic", "ll"),
+          intercept.bottom = FALSE,
+          header=FALSE,
+          summary=FALSE)
+```
+
+f07_nearest_scl, f07_girl_cnt, f07_age_cnt, f07_age_head_cnt, f07_num_sheep_cnt all significant
+
+```{r plot models against each other to compare predictions}
+plot(predict(r2, type="response"), predict(p2, type="response"), xlab = "linear model", ylab = "probit model")
+abline(a=0, b=1, col="red")
+```
+
+we can see the difference in the tails
+
+```{r f test for language, wealth}
+linearHypothesis(p2,c("f07_tajik_cnt = 0","f07_farsi_cnt = 0"),test="F")
+linearHypothesis(p2,c("f07_num_sheep_cnt = 0","f07_jeribs_cnt = 0"),test="F")
+```
+jeribs and sheep jointly significant
+farsi and tajik not.
+
+---
+
+
+```{r correlations, eval=FALSE, include=FALSE}
+plot(afghan[,c("f07_formal_school", "f07_nearest_scl", "f07_heads_child_cnt", "f07_girl_cnt", "f07_age_cnt", "f07_age_head_cnt", "f07_yrs_ed_head_cnt", "f07_jeribs_cnt", "f07_num_sheep_cnt", "f07_duration_village_cnt", "f07_farsi_cnt" ,"f07_tajik_cnt" , "f07_farmer_cnt","f07_num_ppl_hh_cnt")])
+```
+
+
+```{r comparing glm and lm univariate models graphically, eval=FALSE, include=FALSE}
+ggplot(afghan, aes(x=f07_nearest_scl, y=f07_formal_school)) + geom_point(shape=20) + geom_smooth(method=glm, method.args=list(family=binomial(link="probit")), se=FALSE) + geom_smooth(method=lm, se=FALSE, colour="red")
+```
+
+
