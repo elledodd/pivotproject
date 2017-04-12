@@ -27,6 +27,10 @@ afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
 
 #log variables
 
+#interactions
+# tajik * farmer
+# child_age * girl
+# heads_child * girl
 
 #ratios
 #sheep per household member (proxy for wealth?)
