@@ -28,5 +28,13 @@ afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
 #log variables
 
 #interaction terms
+#language by farmer
+afghan$tajik_farmer = afghan$tajik * afghan$farmer
+#age by gender
+afghan$age_child_girl = afghan$age_child* afghan$girl
+#child of household headby gender
+afghan$heads_child_girl = afghan$heads_child* afghan$girl
+#sheep per household member (proxy for wealth?)
+afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
 
 #ratios
