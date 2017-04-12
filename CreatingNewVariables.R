@@ -34,7 +34,8 @@ afghan$tajik_farmer = afghan$tajik * afghan$farmer
 afghan$age_child_girl = afghan$age_child* afghan$girl
 #child of household headby gender
 afghan$heads_child_girl = afghan$heads_child* afghan$girl
-#sheep per household member (proxy for wealth?)
-afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
+
 
 #ratios
+#sheep per household member (proxy for wealth?)
+afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
