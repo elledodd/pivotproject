@@ -54,8 +54,7 @@ afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
                  
                  # non-matching new names#                 
                  "f07_age_cnt" = "age_child",
-                 "f07_both_norma_total" = "test_score_normalized"
-))
+                 "f07_both_norma_total" = "test_score_normalized"))
 
 #age by gender
 
@@ -90,7 +89,6 @@ balancetable<-balancetable[!rownames(balancetable) == "clustercode", ]
 
 
 #run t.tests, skipping treatment[14]
-varlist
 balance_tests <- lapply(varlist[c(1:13,16:18, 20:21)], function(x) {
   t.test(as.formula(paste(x,"treatment",sep="~")), data = balance_variables
          , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
@@ -157,7 +155,11 @@ rownames(attrition_table) <- varlist[c(1:12,16:18,20:21)]
 kable (attrition_table)
 ```
 
-No significant correlation between demographic variables greater than 0.35.
+```{r, eval = FALSE}
+kable(round(cor(afghan[,c("formal_school", "nearest_scl", "heads_child", "girl", "age_child", "age_head", "yrs_ed_head", "jeribs", "num_sheep", "duration_village", "farsi" ,"tajik" , "farmer","num_ppl_hh")]), digits = 2))
+```
+
+No two independent variables have correlation greater than 0.35.
 
 ```{r, message=FALSE, warning=FALSE, results='asis'}
 
