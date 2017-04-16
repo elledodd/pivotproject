@@ -56,6 +56,7 @@ afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
 
 attach(afghan)
 
+
 ##############################################################################
 #Q1 - Create Balance Table                                                   #
 ##############################################################################
@@ -88,16 +89,13 @@ balance_tests <- lapply(varlist[c(1:13,16:18, 20:22)], function(x) {
 balance_test_pvals <- t(sapply(balance_tests, function(x) {
   c("mean_crtl" = unname(x$estimate[1]),
     "mean_trt" = unname(x$estimate[2]),
-    "diff in means" =unname(x$estimate[2])-unname(x$estimate[1]),
-    p.value = x$p.value,
-    stars = stars.pval(c(x$p.value)),
-    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x)),
-    adj.stars = stars.pval(p.adjust(x$p.value, method = "bonferroni", n = length(x)))
+    "diff_means" =unname(x$estimate[2])-unname(x$estimate[1]),
+    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x))
   )
 }))
 
 balance_test_pvals <- data.frame(balance_test_pvals, stringsAsFactors=FALSE)
-balance_test_pvals[c(1:4,6)] <- lapply(balance_test_pvals[c(1:4,6)], function(x) as.numeric(as.character(x)))
+balance_test_pvals[] <- lapply(balance_test_pvals[], function(x) as.numeric(as.character(x)))
 balancetable<-cbind(balancetable,balance_test_pvals)
 balancetable<-round(balancetable,3)
 balancetable
