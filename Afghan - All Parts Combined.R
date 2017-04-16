@@ -15,6 +15,7 @@ library(haven)
 
 #clean variable names
 #only run this once
+afghan <- afghandata
 afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
                            "f07_heads_child_cnt" = "heads_child",
                            "f07_girl_cnt" = "girl",
@@ -50,12 +51,14 @@ afghan$heads_child_girl <- afghan$heads_child* afghan$girl
 #sheep per household member (proxy for wealth?)
 afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
 
+attach(afghan)
+
 ##############################################################################
 #Q1 - Create Balance Table                                                   #
 ##############################################################################
 
 #create dtaa frame of only the variables of interest
-remove = c("hh_id", "observation_id")
+remove <- c("hh_id", "observation_id")
 varlist <- colnames(afghan[,!names(afghan) %in% remove])
 balance_variables <-afghan[,!colnames(afghan) %in% remove]
 
@@ -102,7 +105,7 @@ sum_list <- list(afghan$test_observed,
                  afghan$test_observed[treatment == 0],
                  afghan$test_score_normalized,
                  afghan$test_score_normalized[treatment == 1],
-                 afghan$test_score_normalized[treatment ==0]
+                 afghan$test_score_normalized[treatment == 0]
 )
 n <- sapply(sum_list, function(x) length(which(!is.na(x))))
 mean <- sapply(sum_list, mean, na.rm = T)
@@ -112,8 +115,8 @@ median <- sapply(sum_list, median, na.rm = T)
 max <- sapply(sum_list, max, na.rm = T)
 sum_table<-cbind(n,mean,sd,min,median,max)
 sum_table<-round(sum_table,digits=3)
-rownames(sum_table) <- c('Test Taken','Test Taken for treatment', 'Test Taken for Control',
-                         'Normalized Test Score', 'Test Score for Treatment', 'Test Score for control')
+rownames(sum_table) <- c('Test Taken','Test Taken for Treatment', 'Test Taken for Control',
+                         'Normalized Test Score', 'Test Score for Treatment', 'Test Score for Control')
 sum_table
 
 #creates list of variable for passing to loops, skips ids
@@ -124,11 +127,12 @@ afghanattrition <- afghan[!complete.cases(afghan),]
 #########################################################
 #comparisons of treatment and control for attritted only#
 #########################################################
-#omits treatment[14] and test_score[19]
-attrition_by_treatment <-lapply(varlist[c(1:13,15:18,20:23)], function(x) {
+#omits test_observed[13], treatment[14] and test_score[19]
+attrition_by_treatment <-lapply(varlist[c(1:12,15:18,20:23)], function(x) {
   t.test(as.formula(paste(x,"treatment",sep="~")), data = afghanattrition
          , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
 })
+
 #create table
 attrition_table <- t(sapply(attrition_by_treatment, function(x) {
   c(x$data.name,
@@ -210,7 +214,6 @@ girl_attrition_table
 ##############################################################################
 #Q4 - Household fixed effects regression for school enrollment on test score #
 ##############################################################################
-attach(afghan)
 regschoolontest <- lm(test_score_normalized ~ 
                         formal_school + 
                         heads_child + 
@@ -276,7 +279,7 @@ summary(lm(test_score_normalized ~ formal_school * nearest_scl,
 
 ## Boys only
 summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
-           data = afghan, subset=(afghan$f07_girl_cnt == 0)), robust = T)
+           data = afghan, subset=(afghan$girl == 0)), robust = T)
 
 ## Girls only
 summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
