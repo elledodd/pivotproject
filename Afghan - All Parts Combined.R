@@ -14,6 +14,7 @@ library(plm)
 library(haven)
 library(car)
 library(knitr)
+library(gtools)
 
 
 #clean variable names
@@ -44,12 +45,11 @@ afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
 
 #interaction terms
 #language by farmer
-afghan$tajik_farmer <- afghan$tajik * afghan$farmer
 #age by gender
-afghan$age_child_girl = afghan$age_child* afghan$girl
-#child of household headby gender
-afghan$heads_child_girl <- afghan$heads_child* afghan$girl
-
+afghan$age_girl <- afghan$age_child*afghan$girl
+afghan$age_girl[afghan$age_girl  == 0] <- NA
+afghan$age_boy <-  afghan$age_child* !afghan$girl
+afghan$age_boy[afghan$age_boy  == 0] <- NA
 #ratios
 #sheep per household member (proxy for wealth?)
 afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
@@ -66,38 +66,42 @@ varlist <- colnames(afghan[,!names(afghan) %in% remove])
 balance_variables <-afghan[,!colnames(afghan) %in% remove]
 
 #generate counts
-n_treatment <- apply(balance_variables[balance_variables$treatment == 1,], 2, function(x) length(which(!is.na(x))))
-n_control <- apply(balance_variables[balance_variables$treatment == 0,], 2, function(x) length(which(!is.na(x))))
+n_ctrl <- apply(balance_variables[balance_variables$treatment == 0,], 2, function(x) length(which(!is.na(x))))
+n_trt <- apply(balance_variables[balance_variables$treatment == 1,], 2, function(x) length(which(!is.na(x))))
 
 #generate table
-balancetable <-cbind(n_control,n_treatment)
-#drop treatment row
+balancetable <-cbind(n_ctrl,n_trt)
+#drop treatment, test score, cluster rows
 balancetable<-balancetable[!rownames(balancetable) == "treatment", ]
+balancetable<-balancetable[!rownames(balancetable) == "test_score_normalized", ]
+balancetable<-balancetable[!rownames(balancetable) == "clustercode", ]
+
 
 #run t.tests, skipping treatment[14]
-balance_tests <- lapply(varlist[c(1:13,15:23)], function(x) {
+varlist
+balance_tests <- lapply(varlist[c(1:13,16:18, 20:22)], function(x) {
   t.test(as.formula(paste(x,"treatment",sep="~")), data = balance_variables
          , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
 })
 
 #extract and adjust p vals
 balance_test_pvals <- t(sapply(balance_tests, function(x) {
-  c(x$estimate[],
-    "diff in means" =unname(x$estimate[1])-unname(x$estimate[2]),
-    ci.lower = x$conf.int[1],
-    ci.upper = x$conf.int[2],
+  c("mean_crtl" = unname(x$estimate[1]),
+    "mean_trt" = unname(x$estimate[2]),
+    "diff in means" =unname(x$estimate[2])-unname(x$estimate[1]),
     p.value = x$p.value,
+    stars = stars.pval(c(x$p.value)),
     "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x)),
-    x$parameter
+    adj.stars = stars.pval(p.adjust(x$p.value, method = "bonferroni", n = length(x)))
   )
 }))
 
 balance_test_pvals <- data.frame(balance_test_pvals, stringsAsFactors=FALSE)
-balance_test_pvals[] <- lapply(balance_test_pvals, function(x) as.numeric(as.character(x)))
+balance_test_pvals[c(1:4,6)] <- lapply(balance_test_pvals[c(1:4,6)], function(x) as.numeric(as.character(x)))
 balancetable<-cbind(balancetable,balance_test_pvals)
 balancetable<-round(balancetable,3)
 balancetable
-
+  
 ##############################################################################
 #Q2 - Create Attrition Table                                                 #
 ##############################################################################
