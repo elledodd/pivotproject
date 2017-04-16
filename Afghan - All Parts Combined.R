@@ -248,7 +248,8 @@ robust_se.treat_enrollment_girl.adv_clus <- sqrt(diag(vcovHC(treat_enrollment_gi
 
 stargazer(treat_enrollment,treat_enrollment_girl,treat_enrollment.adv,treat_enrollment_girl.adv
           ,treat_enrollment.adv_clus,treat_enrollment_girl.adv_clus, title="Results"
-          , align=TRUE, type = "text",omit = "clustercode", omit.labels = "Cluster Fixed Effects?",
+          , align=TRUE, type = "text",omit = "clustercode", add.lines = list(
+            c("Cluster Fixed Effects?", "No", "No", "No", "No", "Yes", "Yes")),
           se = list(robust_se.treat_enrollment,robust_se.treat_enrollment_girl,robust_se.treat_enrollment.adv,robust_se.treat_enrollment_girl.adv
                     ,robust_se.treat_enrollment.adv_clus,robust_se.treat_enrollment_girl.adv_clus)
           )
@@ -290,7 +291,9 @@ stargazer(treat_test,treat_test_girl,treat_test.adv,treat_test_girl.adv,treat_te
 se = list(robust_se.treat_test,robust_se.treat_test_girl,robust_se.treat_test.adv,robust_se.treat_test_girl.adv
           ,robust_se.treat_test.adv_clus,robust_se.treat_test_girl.adv_clus)
           ,omit = "clustercode",
-          omit.labels = "Cluster Fixed Effects?")
+add.lines = list(
+  c("Cluster Fixed Effects?", "No", "No", "No", "No", "Yes", "Yes")
+))
 
 #########################################################################
 #Part 6 - Local average treatment effect                                #
