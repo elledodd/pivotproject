@@ -136,7 +136,7 @@ attrition_table <- t(sapply(attrition_by_treatment, function(x) {
     "mean_crtl" = unname(x$estimate[1]),
     "mean_trt" = unname(x$estimate[2]),
     "diff_means" =unname(x$estimate[2])-unname(x$estimate[1]),
-    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x))
+    "p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x))
   )
 }))
 rownames(attrition_table) <- attrition_table[,1]
