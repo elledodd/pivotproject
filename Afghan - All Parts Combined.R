@@ -229,8 +229,8 @@ summary(lm(test_score_normalized ~ formal_school * treatment,
 
 ## Boys only
 summary(lm(test_score_normalized ~ formal_school * treatment, 
-           data = afghan), subset=(afghan$girl == 0)), robust = T)
+           data = afghan, subset=(afghan$girl == 0), robust = T))
 
 ## Girls only
 summary(lm(test_score_normalized ~ formal_school * treatment, 
-           data = afghan), subset=(afghan$girl == 1)), robust = T)
+           data = afghan, subset=(afghan$girl == 1), robust = T))
