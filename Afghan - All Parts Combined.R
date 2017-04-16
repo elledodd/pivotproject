@@ -12,6 +12,9 @@ library(lfe)
 library(stargazer)
 library(plm)
 library(haven)
+library(car)
+library(knitr)
+
 
 #clean variable names
 #only run this once
@@ -214,6 +217,8 @@ girl_attrition_table
 ##############################################################################
 #Q4 - Household fixed effects regression for school enrollment on test score #
 ##############################################################################
+MAKE SURE SAME LIST OF VARIABLES
+
 regschoolontest <- lm(test_score_normalized ~ 
                         formal_school + 
                         heads_child + 
@@ -234,19 +239,23 @@ regschoolontest <- lm(test_score_normalized ~
                         heads_child_girl +
                         sheep_per_hh_member)
 
-regschoolontestFE <- felm(test_score_normalized ~ 
+regschoolontestFE <- lm(test_score_normalized ~ 
                             formal_school + 
                             heads_child + 
                             girl + 
                             age_child + 
                             age_child_girl +
-                            heads_child_girl
-                          | hh_id)
+                            heads_child_girl +
+                            as.factor(hh_id))
 
+linearHypothesis(regschoolontest,c("heads_child_girl = 0","heads_child = 0"),test="F")
 
 robust_se.sumregschoolontest <- summary(regschoolontest, robust = T)$coefficients[,2]
 robust_se.sumregschoolontestFE <- summary(regschoolontestFE, robust = T)$coefficients[,2]
-stargazer(regschoolontest,regschoolontestFE, title="Results", align=TRUE, type = "text",se = list(robust_se.sumregschoolontest, robust_se.sumregschoolontestFE))
+stargazer(regschoolontest,regschoolontestFE, title="Results", align=TRUE, type = "text",
+          se = list(robust_se.sumregschoolontest, robust_se.sumregschoolontestFE),
+          omit = "hh_id",
+          omit.labels = "HH ID Fixed Effects?")
 
 
 
@@ -274,13 +283,15 @@ stargazer(treat_enrollment,treat_enrollment_girl,treat_test,treat_test_girl, tit
 ##                        + (f07_nearest_scl*f07_formal_school)
 
 ## Full sample
-summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
+summary(lm(test_score_normalized ~ formal_school * treatment, 
            data = afghan), robust = T)
 
+
+
 ## Boys only
-summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
-           data = afghan, subset=(afghan$girl == 0)), robust = T)
+summary(lm(test_score_normalized ~ formal_school * treatment, 
+           data = afghan), subset=(afghan$girl == 0)), robust = T)
 
 ## Girls only
-summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
-           data = afghan, subset=(afghan$girl == 1)), robust = T)
+summary(lm(test_score_normalized ~ formal_school * treatment, 
+           data = afghan), subset=(afghan$girl == 1)), robust = T)
