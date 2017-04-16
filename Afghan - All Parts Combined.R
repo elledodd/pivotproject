@@ -222,15 +222,20 @@ stargazer(treat_enrollment,treat_enrollment_girl,treat_test,treat_test_girl, tit
 ##                        + (f07_nearest_scl*f07_formal_school)
 
 ## Full sample
-summary(lm(test_score_normalized ~ formal_school * treatment, 
-           data = afghan), robust = T)
+q6.full <- lm(test_score_normalized ~ formal_school * treatment, 
+           data = afghan)
+q6.boys <- lm(test_score_normalized ~ formal_school * treatment, 
+           data = afghan, subset=(afghan$girl == 0))
+q6.girls <-lm(test_score_normalized ~ formal_school * treatment, 
+           data = afghan, subset=(afghan$girl == 1))
 
+q6.full_se<- summary(q6.full, robust = T)$coefficients[,2]
+q6.boys_se <- summary(q6.boys, robust = T)$coefficients[,2]
+q6.girls_se <- summary(q6.girls, robust = T)$coefficients[,2]
 
-
-## Boys only
-summary(lm(test_score_normalized ~ formal_school * treatment, 
-           data = afghan, subset=(afghan$girl == 0), robust = T))
-
-## Girls only
-summary(lm(test_score_normalized ~ formal_school * treatment, 
-           data = afghan, subset=(afghan$girl == 1), robust = T))
+#```{r, echo=TRUE, message=FALSE, warning=FALSE, results='asis'}
+stargazer(q6.full, q6.boys, q6.girls, 
+          se = list(q6.full_se, q6.boys_se, q6.girls_se),
+          align=TRUE,
+          title = "Regression Table",
+          type = "text")
