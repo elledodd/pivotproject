@@ -1,0 +1,202 @@
+---
+title: "Appendix"
+author: "Joe Backer, Elle Dodd, Dan Humphrey, Dan Peckham"
+date: "3/25/2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE,
+	root.dir = "~/Documents/Stats2/pivotproject",
+	tidy = TRUE)
+```
+
+```{r data}
+library(haven)
+library(sandwich)
+library(stargazer)
+library(ggplot2)
+library(car)
+library(knitr)
+library(plyr)
+library(lfe)
+library(plm)
+library(gtools)
+library(pander)
+```
+
+``` {r data hygiene}
+afghan <- read_dta("~/Documents/Stats2/pivotproject/afghandata.dta")
+#rename variables
+afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
+                 "f07_heads_child_cnt" = "heads_child",
+                 "f07_girl_cnt" = "girl",
+                 "f07_age_head_cnt" ="age_head",
+                 "f07_yrs_ed_head_cnt" = "yrs_ed_head", 
+                 "f07_jeribs_cnt" = "jeribs", 
+                 "f07_num_sheep_cnt" = "num_sheep", 
+                 "f07_duration_village_cnt" = "duration_village", 
+                 "f07_farsi_cnt" = "farsi",
+                 "f07_tajik_cnt" = "tajik", 
+                 "f07_farmer_cnt"    = "farmer",
+                 "f07_num_ppl_hh_cnt"   = "num_ppl_hh",
+                 "f07_test_observed" = "test_observed",
+                 "f07_formal_school" = "formal_school",
+                 "f07_nearest_scl" = "nearest_scl",
+                 
+                 # non-matching new names#                 
+                 "f07_age_cnt" = "age_child",
+                 "f07_both_norma_total" = "test_score_normalized"
+))
+#age by gender
+afghan$age_girl <- afghan$age_child*afghan$girl
+afghan$age_girl[afghan$age_girl  == 0] <- NA
+afghan$age_boy <-  afghan$age_child* !afghan$girl
+afghan$age_boy[afghan$age_boy  == 0] <- NA
+
+#sheep per household member (proxy for wealth?)
+afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
+
+attach(afghan)
+```
+
+```{r Balance table}
+#Create Balance Table
+
+#create data frame of only the variables of interest
+remove <- c("hh_id", "observation_id")
+varlist <- colnames(afghan[,!names(afghan) %in% remove])
+balance_variables <-afghan[,!colnames(afghan) %in% remove]
+
+#generate counts
+n_ctrl <- apply(balance_variables[balance_variables$treatment == 0,], 2, function(x) length(which(!is.na(x))))
+n_trt <- apply(balance_variables[balance_variables$treatment == 1,], 2, function(x) length(which(!is.na(x))))
+
+#generate table
+balancetable <-cbind(n_ctrl,n_trt)
+#drop treatment, test score, cluster rows
+balancetable<-balancetable[!rownames(balancetable) == "treatment", ]
+balancetable<-balancetable[!rownames(balancetable) == "test_score_normalized", ]
+balancetable<-balancetable[!rownames(balancetable) == "clustercode", ]
+
+
+#run t.tests, skipping treatment[14]
+varlist
+balance_tests <- lapply(varlist[c(1:13,16:18, 20:22)], function(x) {
+  t.test(as.formula(paste(x,"treatment",sep="~")), data = balance_variables
+         , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+})
+
+#extract and adjust p vals
+balance_test_pvals <- t(sapply(balance_tests, function(x) {
+  c("mean_crtl" = unname(x$estimate[1]),
+    "mean_trt" = unname(x$estimate[2]),
+    "diff_means" =unname(x$estimate[2])-unname(x$estimate[1]),
+    "p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x))
+  )
+}))
+
+balance_test_pvals <- data.frame(balance_test_pvals, stringsAsFactors=FALSE)
+balance_test_pvals[] <- lapply(balance_test_pvals[], function(x) as.numeric(as.character(x)))
+balancetable<-cbind(balancetable,balance_test_pvals)
+balancetable<-round(balancetable,3)
+#Show table
+kable(balancetable)
+
+```
+
+```{r attrition}
+#Attrition
+#summary stats
+sum_list <- list(afghan$test_observed,
+                 afghan$test_observed[treatment == 1],
+                 afghan$test_observed[treatment == 0]
+)
+n <- sapply(sum_list, function(x) length(which(!is.na(x))))
+mean <- sapply(sum_list, mean, na.rm = T)
+sd <- sapply(sum_list, sd, na.rm = T)
+sum_table<-cbind(n,mean,sd)
+sum_table<-round(sum_table,digits=3)
+rownames(sum_table) <- c('% Test Taken - All','% Test Taken - Treatment', '% Test Taken - Control')
+sum_table
+
+#creating a dataset of only the attritted
+afghanattrition <- afghan[!complete.cases(afghan),]
+
+#comparisons of treatment and control for attritted only#
+
+#omits test_observed[13], treatment[14], clustercode[15], and test_score[19]
+varlist
+attrition_by_treatment <-lapply(varlist[c(1:12,16:18,20:22)], function(x) {
+  t.test(as.formula(paste(x,"treatment",sep="~")), data = afghanattrition
+         , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+})
+
+#create table
+attrition_table <- t(sapply(attrition_by_treatment, function(x) {
+  c(x$data.name,
+    "mean_crtl" = unname(x$estimate[1]),
+    "mean_trt" = unname(x$estimate[2]),
+    "diff_means" =unname(x$estimate[2])-unname(x$estimate[1]),
+    "p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x))
+  )
+}))
+rownames(attrition_table) <- attrition_table[,1]
+attrition_table <- attrition_table[,-c(1)]
+attrition_table <- data.frame(attrition_table, stringsAsFactors=FALSE)
+attrition_table[] <- lapply(attrition_table, function(x) as.numeric(as.character(x)))
+rownames(attrition_table) <- varlist[c(1:12,16:18,20:22)]
+kable (attrition_table)
+```
+
+\break
+
+No significant correlation between demographic variables greater than 0.35.
+
+WHY CHOOSE PROBIT?
+PLOT the RESIDUALS?
+cross ref with balance tables
+fixed effects for village
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
+r1 <- lm(formal_school ~ nearest_scl, data = afghan)
+r2 <- lm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi ,  data = afghan)
+r3 <- lm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi + as.factor(clustercode), data = afghan)
+
+p1 <- glm(formal_school ~ nearest_scl, data = afghan, family=binomial(link="probit"))
+p2 <- glm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi, data = afghan, family=binomial(link="probit"))
+stargazer(r1, r2, r3, p1, p2,
+          omit.stat = c("f", "ser", "aic", "ll"),
+          intercept.bottom = FALSE,
+          header=FALSE,
+          summary=FALSE)
+```
+
+nearest_scl, girl, age_child, age_head, num_sheep all significant
+
+```{r plot models against each other to compare predictions}
+plot(predict(r2, type="response"), predict(p2, type="response"), xlab = "linear model", ylab = "probit model")
+abline(a=0, b=1, col="red")
+```
+
+we can see the difference in the tails
+
+```{r f test for language, wealth}
+linearHypothesis(p2,c("tajik = 0","farsi = 0"),test="F")
+linearHypothesis(p2,c("num_sheep = 0","jeribs = 0"),test="F")
+```
+jeribs and sheep jointly significant
+farsi and tajik not.
+
+
+```{r}
+plot (afghan$jeribs, afghan$num_sheep)
+plot (afghan$duration_village, afghan$age_head)
+```
+
+
