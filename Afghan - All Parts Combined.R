@@ -248,7 +248,7 @@ regschoolontestFE <- lm(test_score_normalized ~
                             heads_child_girl +
                             as.factor(hh_id))
 
-linearHypothesis(regschoolontest,c("heads_child_girl = 0","heads_child = 0"),test="F")
+linearHypothesis(regschoolontestFE,c("heads_child_girl = 0","heads_child = 0"),test="F")
 
 robust_se.sumregschoolontest <- summary(regschoolontest, robust = T)$coefficients[,2]
 robust_se.sumregschoolontestFE <- summary(regschoolontestFE, robust = T)$coefficients[,2]
