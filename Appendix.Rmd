@@ -123,15 +123,14 @@ sd <- sapply(sum_list, sd, na.rm = T)
 sum_table<-cbind(n,mean,sd)
 sum_table<-round(sum_table,digits=3)
 rownames(sum_table) <- c('% Test Taken - All','% Test Taken - Treatment', '% Test Taken - Control')
-sum_table
+kable(sum_table)
 
 #creating a dataset of only the attritted
 afghanattrition <- afghan[!complete.cases(afghan),]
 
-#comparisons of treatment and control for attritted only#
+#comparisons of treatment and control for attritted only
 
 #omits test_observed[13], treatment[14], clustercode[15], and test_score[19]
-varlist
 attrition_by_treatment <-lapply(varlist[c(1:12,16:18,20:22)], function(x) {
   t.test(as.formula(paste(x,"treatment",sep="~")), data = afghanattrition
          , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
@@ -161,42 +160,50 @@ No significant correlation between demographic variables greater than 0.35.
 WHY CHOOSE PROBIT?
 PLOT the RESIDUALS?
 cross ref with balance tables
-fixed effects for village
 
 ```{r, echo=FALSE, message=FALSE, warning=FALSE, results='asis'}
 r1 <- lm(formal_school ~ nearest_scl, data = afghan)
-r2 <- lm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi ,  data = afghan)
-r3 <- lm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi + as.factor(clustercode), data = afghan)
+r2 <- lm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child + duration_village + num_ppl_hh + tajik + farsi + farmer + sheep_per_hh_member + chagcharan,  data = afghan)
+r3 <- lm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child + duration_village + num_ppl_hh + tajik + farsi + farmer + sheep_per_hh_member + as.factor(clustercode), data = afghan)
+
+robust_se1    <- sqrt(diag(vcovHC(r1, type = "HC1")))
+robust_se2    <- sqrt(diag(vcovHC(r2, type = "HC1")))
+robust_se3    <- sqrt(diag(vcovHC(r3, type = "HC1")))
 
 p1 <- glm(formal_school ~ nearest_scl, data = afghan, family=binomial(link="probit"))
-p2 <- glm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi, data = afghan, family=binomial(link="probit"))
-stargazer(r1, r2, r3, p1, p2,
+p2 <- glm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child+duration_village + num_ppl_hh + tajik + farsi + farmer+ sheep_per_hh_member+ chagcharan,  data = afghan, family=binomial(link="probit"))
+p3 <- glm(formal_school ~ nearest_scl +  girl + age_child + age_head + num_sheep + jeribs + yrs_ed_head + heads_child + duration_village + num_ppl_hh + tajik + farsi + farmer + sheep_per_hh_member + as.factor(clustercode), data = afghan, family=binomial(link="probit"))
+
+stargazer(r2, r3,
           omit.stat = c("f", "ser", "aic", "ll"),
+          omit        = "clustercode",
+          omit.labels = "clustercode fixed effects?",
+          se = list(robust_se2, robust_se3),
+          title = "Linear OLS model",
           intercept.bottom = FALSE,
           header=FALSE,
           summary=FALSE)
-```
 
-nearest_scl, girl, age_child, age_head, num_sheep all significant
+stargazer(p2, p3,
+          omit.stat = c("f", "ser", "aic", "ll"),
+          omit        = "clustercode",
+          omit.labels = "clustercode fixed effects?",
+          title = "Probit model",
+          intercept.bottom = FALSE,
+          header=FALSE,
+          summary=FALSE)
+
+```
 
 ```{r plot models against each other to compare predictions}
 plot(predict(r2, type="response"), predict(p2, type="response"), xlab = "linear model", ylab = "probit model")
 abline(a=0, b=1, col="red")
 ```
 
-we can see the difference in the tails
-
 ```{r f test for language, wealth}
 linearHypothesis(p2,c("tajik = 0","farsi = 0"),test="F")
 linearHypothesis(p2,c("num_sheep = 0","jeribs = 0"),test="F")
 ```
-jeribs and sheep jointly significant
-farsi and tajik not.
 
-
-```{r}
-plot (afghan$jeribs, afghan$num_sheep)
-plot (afghan$duration_village, afghan$age_head)
-```
 
 
