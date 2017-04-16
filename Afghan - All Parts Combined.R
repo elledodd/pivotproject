@@ -1,0 +1,283 @@
+#installs - run only if needed
+#install.packages("plyr")
+# install.packages("lfe")
+# install.packages("stargazer")
+# install.packages("plm")
+# install.packages("sandwich")
+
+#libraries
+library(plyr)
+library(sandwich)
+library(lfe)
+library(stargazer)
+library(plm)
+library(haven)
+
+#clean variable names
+#only run this once
+afghan <- rename(afghan, c("f07_hh_id"= "hh_id",
+                           "f07_heads_child_cnt" = "heads_child",
+                           "f07_girl_cnt" = "girl",
+                           "f07_age_head_cnt" ="age_head",
+                           "f07_yrs_ed_head_cnt" = "yrs_ed_head", 
+                           "f07_jeribs_cnt" = "jeribs", 
+                           "f07_num_sheep_cnt" = "num_sheep", 
+                           "f07_duration_village_cnt" = "duration_village", 
+                           "f07_farsi_cnt" = "farsi",
+                           "f07_tajik_cnt" = "tajik", 
+                           "f07_farmer_cnt"    = "farmer",
+                           "f07_num_ppl_hh_cnt"   = "num_ppl_hh",
+                           "f07_test_observed" = "test_observed",
+                           "f07_formal_school" = "formal_school",
+                           "f07_nearest_scl" = "nearest_scl",
+                           
+                           # non-matching new names#                 
+                           "f07_age_cnt" = "age_child",
+                           "f07_both_norma_total" = "test_score_normalized"
+))
+
+#log variables
+
+#interaction terms
+#language by farmer
+afghan$tajik_farmer <- afghan$tajik * afghan$farmer
+#age by gender
+afghan$age_child_girl = afghan$age_child* afghan$girl
+#child of household headby gender
+afghan$heads_child_girl <- afghan$heads_child* afghan$girl
+
+#ratios
+#sheep per household member (proxy for wealth?)
+afghan$sheep_per_hh_member = afghan$num_sheep / afghan$num_ppl_hh
+
+##############################################################################
+#Q1 - Create Balance Table                                                   #
+##############################################################################
+
+#create dtaa frame of only the variables of interest
+remove = c("hh_id", "observation_id")
+varlist <- colnames(afghan[,!names(afghan) %in% remove])
+balance_variables <-afghan[,!colnames(afghan) %in% remove]
+
+#generate counts
+n_treatment <- apply(balance_variables[balance_variables$treatment == 1,], 2, function(x) length(which(!is.na(x))))
+n_control <- apply(balance_variables[balance_variables$treatment == 0,], 2, function(x) length(which(!is.na(x))))
+
+#generate table
+balancetable <-cbind(n_control,n_treatment)
+#drop treatment row
+balancetable<-balancetable[!rownames(balancetable) == "treatment", ]
+
+#run t.tests, skipping treatment[14]
+balance_tests <- lapply(varlist[c(1:13,15:23)], function(x) {
+  t.test(as.formula(paste(x,"treatment",sep="~")), data = balance_variables
+         , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+})
+
+#extract and adjust p vals
+balance_test_pvals <- t(sapply(balance_tests, function(x) {
+  c(x$estimate[],
+    "diff in means" =unname(x$estimate[1])-unname(x$estimate[2]),
+    ci.lower = x$conf.int[1],
+    ci.upper = x$conf.int[2],
+    p.value = x$p.value,
+    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x)),
+    x$parameter
+  )
+}))
+
+balance_test_pvals <- data.frame(balance_test_pvals, stringsAsFactors=FALSE)
+balance_test_pvals[] <- lapply(balance_test_pvals, function(x) as.numeric(as.character(x)))
+balancetable<-cbind(balancetable,balance_test_pvals)
+balancetable<-round(balancetable,3)
+balancetable
+
+##############################################################################
+#Q2 - Create Attrition Table                                                 #
+##############################################################################
+
+#summary stats
+sum_list <- list(afghan$test_observed,
+                 afghan$test_observed[treatment == 1],
+                 afghan$test_observed[treatment == 0],
+                 afghan$test_score_normalized,
+                 afghan$test_score_normalized[treatment == 1],
+                 afghan$test_score_normalized[treatment ==0]
+)
+n <- sapply(sum_list, function(x) length(which(!is.na(x))))
+mean <- sapply(sum_list, mean, na.rm = T)
+sd <- sapply(sum_list, sd, na.rm = T)
+min <- sapply(sum_list, min, na.rm = T)
+median <- sapply(sum_list, median, na.rm = T)
+max <- sapply(sum_list, max, na.rm = T)
+sum_table<-cbind(n,mean,sd,min,median,max)
+sum_table<-round(sum_table,digits=3)
+rownames(sum_table) <- c('Test Taken','Test Taken for treatment', 'Test Taken for Control',
+                         'Normalized Test Score', 'Test Score for Treatment', 'Test Score for control')
+sum_table
+
+#creates list of variable for passing to loops, skips ids
+varlist <- names(afghan)[c(2:20, 22:25)]
+#creating a dataset of only the attritted
+afghanattrition <- afghan[!complete.cases(afghan),]
+
+#########################################################
+#comparisons of treatment and control for attritted only#
+#########################################################
+#omits treatment[14] and test_score[19]
+attrition_by_treatment <-lapply(varlist[c(1:13,15:18,20:23)], function(x) {
+  t.test(as.formula(paste(x,"treatment",sep="~")), data = afghanattrition
+         , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+})
+#create table
+attrition_table <- t(sapply(attrition_by_treatment, function(x) {
+  c(x$data.name,
+    x$estimate,
+    ci.lower = x$conf.int[1],
+    ci.upper = x$conf.int[2],
+    p.value = x$p.value,
+    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x)),
+    x$parameter
+  )
+}))
+rownames(attrition_table) <- attrition_table[,1]
+attrition_table <- attrition_table[,-c(1)]
+attrition_table <- data.frame(attrition_table, stringsAsFactors=FALSE)
+attrition_table[] <- lapply(attrition_table, function(x) as.numeric(as.character(x)))
+attrition_table<-format(round(attrition_table,3),digits =1)
+attrition_table
+
+############################################
+#attritors vs compliants for treatment only#
+############################################
+#omits test_observed[13] and treatment[14] and test_score[19]
+attrition_by_test_observed <- lapply(varlist[c(1:12,15:18,20:23)], function(x) {
+  t.test(as.formula(paste(x,"test_observed",sep="~")), data =subset(afghan,treatment==1)
+         ,  alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)})
+#create table and adujst p values
+attrition_by_treatment_table <- t(sapply(attrition_by_test_observed, function(x) {
+  c(x$data.name,
+    x$estimate,
+    ci.lower = x$conf.int[1],
+    ci.upper = x$conf.int[2],
+    p.value = x$p.value,
+    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x)),
+    x$parameter
+  )
+}))
+rownames(attrition_by_treatment_table) <- attrition_by_treatment_table[,1]
+attrition_by_treatment_table <- attrition_by_treatment_table[,-c(1)]
+attrition_by_treatment_table <- data.frame(attrition_by_treatment_table, stringsAsFactors=FALSE)
+attrition_by_treatment_table[] <- lapply(attrition_by_treatment_table, function(x) as.numeric(as.character(x)))
+attrition_by_treatment_table<-format(round(attrition_by_treatment_table,3),digits =1)
+
+attrition_by_treatment_table
+
+########################################
+#attritors vs compliants for girls only#
+########################################
+#omits girl[2], test_observed[13] and test_score[19]
+attrition_for_girls <- lapply(varlist[c(1,3:12,15:18,20:23)], function(x) {
+  t.test(as.formula(paste(x,"test_observed",sep="~")), data = subset(afghan,girl==1)
+         , alternative = "two.sided", mu = 0, paired = FALSE, var.equal = FALSE, conf.level = 0.95)
+})
+
+#create table
+girl_attrition_table <- t(sapply(attrition_for_girls, function(x) {
+  c(x$data.name,
+    x$estimate,
+    ci.lower = x$conf.int[1],
+    ci.upper = x$conf.int[2],
+    p.value = x$p.value,
+    "adj.p.value" = p.adjust(x$p.value, method = "bonferroni", n = length(x)),
+    x$parameter
+  )
+}))
+rownames(girl_attrition_table) <- girl_attrition_table[,1]
+girl_attrition_table <- girl_attrition_table[,-c(1)]
+girl_attrition_table <- data.frame(girl_attrition_table, stringsAsFactors=FALSE)
+girl_attrition_table[] <- lapply(girl_attrition_table, function(x) as.numeric(as.character(x)))
+girl_attrition_table<-format(round(girl_attrition_table,3),digits =1)
+girl_attrition_table
+
+##############################################################################
+#Q3 -  Baseline Enrollment                                                   #
+##############################################################################
+
+
+
+
+##############################################################################
+#Q4 - Household fixed effects regression for school enrollment on test score #
+##############################################################################
+attach(afghan)
+regschoolontest <- lm(test_score_normalized ~ 
+                        formal_school + 
+                        heads_child + 
+                        girl + 
+                        age_head + 
+                        yrs_ed_head + 
+                        jeribs + 
+                        num_sheep + 
+                        duration_village + 
+                        farsi + 
+                        tajik + 
+                        farmer + 
+                        num_ppl_hh + 
+                        nearest_scl + 
+                        age_child + 
+                        tajik_farmer + 
+                        age_child_girl +
+                        heads_child_girl +
+                        sheep_per_hh_member)
+
+regschoolontestFE <- felm(test_score_normalized ~ 
+                            formal_school + 
+                            heads_child + 
+                            girl + 
+                            age_child + 
+                            age_child_girl +
+                            heads_child_girl
+                          | hh_id)
+
+
+robust_se.sumregschoolontest <- summary(regschoolontest, robust = T)$coefficients[,2]
+robust_se.sumregschoolontestFE <- summary(regschoolontestFE, robust = T)$coefficients[,2]
+stargazer(regschoolontest,regschoolontestFE, title="Results", align=TRUE, type = "text",se = list(robust_se.sumregschoolontest, robust_se.sumregschoolontestFE))
+
+
+
+#########################################################################
+#Part 5 - Treatment effect and differences in treatment effect by gender#
+#########################################################################
+
+treat_enrollment <- lm( formal_school ~ treatment, data = afghan)
+treat_enrollment_girl <- lm( formal_school ~ treatment + treatment*girl, data = afghan)
+treat_test <- (lm( test_score_normalized ~ treatment, data = afghan))
+treat_test_girl <- (lm( test_score_normalized ~ treatment + treatment*girl, data = afghan))
+robust_se.treat_enrollment <- summary(treat_enrollment, robust = T)$coefficients[,2]
+robust_se.treat_enrollment_girl<- summary(treat_enrollment_girl, robust = T)$coefficients[,2]
+robust_se.treat_test <- summary(treat_test, robust = T)$coefficients[,2]
+robust_se.treat_test_girl <- summary(treat_test_girl, robust = T)$coefficients[,2]
+stargazer(treat_enrollment,treat_enrollment_girl,treat_test,treat_test_girl, title="Results", align=TRUE, type = "text",
+          se = list(robust_se.treat_enrollment, robust_se.treat_enrollment_girl,robust_se.treat_test,robust_se.treat_test_girl))
+
+
+#########################################################################
+#Part 6 - Local average treatment effect                                #
+#########################################################################
+## Question 6: 
+## f07_both_norma_total  ~ f07_formal_school + f07_nearest_scl 
+##                        + (f07_nearest_scl*f07_formal_school)
+
+## Full sample
+summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
+           data = afghan), robust = T)
+
+## Boys only
+summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
+           data = afghan, subset=(afghan$f07_girl_cnt == 0)), robust = T)
+
+## Girls only
+summary(lm(test_score_normalized ~ formal_school * nearest_scl, 
+           data = afghan, subset=(afghan$girl == 1)), robust = T)
