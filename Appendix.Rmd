@@ -242,31 +242,86 @@ stargazer(regschoolontest,regschoolontestFE,
 ```{r, message=FALSE, warning=FALSE, results='asis'}
 
 #treatment effects by gender
-
-treat_enrollment <- lm( formal_school ~ treatment, data = afghan)
-treat_enrollment_girl <- lm( formal_school ~ treatment + treatment*girl, data = afghan)
-treat_test <- (lm( test_score_normalized ~ treatment, data = afghan))
-treat_test_girl <- (lm( test_score_normalized ~ treatment + treatment*girl, data = afghan))
+#enroll~ treatment
+#test score ~ treatment
+treat_enrollment <- (lm( test_score_normalized ~ treatment, data = afghan))
+treat_enrollment_girl <- (lm( test_score_normalized ~ treatment + treatment*girl
+                        , data = afghan))
+treat_enrollment.adv <- (lm( test_score_normalized ~ treatment+ nearest_scl +  
+                         girl*age_child  + age_head + num_sheep + jeribs + 
+                         yrs_ed_head + heads_child + duration_village 
+                       + num_ppl_hh + tajik + farsi + farmer + chagcharan
+                         , data = afghan))
+treat_enrollment_girl.adv <- (lm( test_score_normalized ~ treatment + treatment*girl
+                            + nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer + chagcharan, data = afghan))
+treat_enrollment.adv_clus <- (lm( test_score_normalized ~ treatment+ nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer + as.factor(clustercode)
+                       , data = afghan))
+treat_enrollment_girl.adv_clus <- (lm( test_score_normalized ~ treatment + treatment*girl
+                            + nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer +  as.factor(clustercode)
+                            , data = afghan))
 robust_se.treat_enrollment <- sqrt(diag(vcovHC(treat_enrollment, type = "HC1")))
-robust_se.treat_enrollment_girl<- sqrt(diag(vcovHC(treat_enrollment_girl, type = "HC1")))
+robust_se.treat_enrollment_girl <- sqrt(diag(vcovHC(treat_enrollment_girl, type = "HC1")))
+robust_se.treat_enrollment.adv <- sqrt(diag(vcovHC(treat_enrollment.adv, type = "HC1")))
+robust_se.treat_enrollment_girl.adv <- sqrt(diag(vcovHC(treat_enrollment_girl.adv, type = "HC1")))
+robust_se.treat_enrollment.adv_clus <- sqrt(diag(vcovHC(treat_enrollment.adv_clus, type = "HC1")))
+robust_se.treat_enrollment_girl.adv_clus <- sqrt(diag(vcovHC(treat_enrollment_girl.adv_clus, type = "HC1")))
+
+stargazer(treat_enrollment,treat_enrollment_girl,treat_enrollment.adv,treat_enrollment_girl.adv,treat_enrollment.adv_clus,treat_enrollment_girl.adv_clus, title="Results", align=TRUE, type = "text",
+se = list(robust_se.treat_enrollment,robust_se.treat_enrollment_girl,robust_se.treat_enrollment.adv,robust_se.treat_enrollment_girl.adv
+          ,robust_se.treat_enrollment.adv_clus,robust_se.treat_enrollment_girl.adv_clus)
+          ,omit = "clustercode",
+add.lines = list(
+  c("Cluster Fixed Effects?", "No", "No", "No", "No", "Yes", "Yes")
+))
+
+#test score ~ treatment
+treat_test <- (lm( test_score_normalized ~ treatment, data = afghan))
+treat_test_girl <- (lm( test_score_normalized ~ treatment + treatment*girl
+                        , data = afghan))
+treat_test.adv <- (lm( test_score_normalized ~ treatment+ nearest_scl +  
+                         girl*age_child  + age_head + num_sheep + jeribs + 
+                         yrs_ed_head + heads_child + duration_village 
+                       + num_ppl_hh + tajik + farsi + farmer + chagcharan
+                         , data = afghan))
+treat_test_girl.adv <- (lm( test_score_normalized ~ treatment + treatment*girl
+                            + nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer + chagcharan, data = afghan))
+treat_test.adv_clus <- (lm( test_score_normalized ~ treatment+ nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer + as.factor(clustercode)
+                       , data = afghan))
+treat_test_girl.adv_clus <- (lm( test_score_normalized ~ treatment + treatment*girl
+                            + nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer +  as.factor(clustercode)
+                            , data = afghan))
 robust_se.treat_test <- sqrt(diag(vcovHC(treat_test, type = "HC1")))
 robust_se.treat_test_girl <- sqrt(diag(vcovHC(treat_test_girl, type = "HC1")))
+robust_se.treat_test.adv <- sqrt(diag(vcovHC(treat_test.adv, type = "HC1")))
+robust_se.treat_test_girl.adv <- sqrt(diag(vcovHC(treat_test_girl.adv, type = "HC1")))
+robust_se.treat_test.adv_clus <- sqrt(diag(vcovHC(treat_test.adv_clus, type = "HC1")))
+robust_se.treat_test_girl.adv_clus <- sqrt(diag(vcovHC(treat_test_girl.adv_clus, type = "HC1")))
 
-stargazer(treat_test,treat_test_girl, 
-          title = "Effect of treatment on enrollment by gender",
-          omit.stat = c("f", "ser", "aic", "ll"),
-          intercept.bottom = FALSE,
-          header=FALSE,
-          summary=FALSE,
-          se = list(robust_se.treat_test,robust_se.treat_test_girl))
-
-stargazer(treat_enrollment,treat_enrollment_girl, 
-          title = "Effect of treatment on test score by gender",
-          omit.stat = c("f", "ser", "aic", "ll"),
-          intercept.bottom = FALSE,
-          header=FALSE,
-          summary=FALSE,
-          se = list(robust_se.treat_enrollment,robust_se.treat_enrollment_girl))
+stargazer(treat_test,treat_test_girl,treat_test.adv,treat_test_girl.adv,treat_test.adv_clus,treat_test_girl.adv_clus, title="Results", align=TRUE, type = "text",
+se = list(robust_se.treat_test,robust_se.treat_test_girl,robust_se.treat_test.adv,robust_se.treat_test_girl.adv
+          ,robust_se.treat_test.adv_clus,robust_se.treat_test_girl.adv_clus)
+          ,omit = "clustercode",
+add.lines = list(
+  c("Cluster Fixed Effects?", "No", "No", "No", "No", "Yes", "Yes")
+))
 ```
 
 ```{r, message=FALSE, warning=FALSE, results='asis'}

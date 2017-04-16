@@ -258,27 +258,26 @@ stargazer(treat_enrollment,treat_enrollment_girl,treat_enrollment.adv,treat_enro
 treat_test <- (lm( test_score_normalized ~ treatment, data = afghan))
 treat_test_girl <- (lm( test_score_normalized ~ treatment + treatment*girl
                         , data = afghan))
-treat_test.adv <- (lm( test_score_normalized ~ treatment+ nearest_scl 
-                       + girl + age_child + age_head 
-                       + num_sheep + jeribs + yrs_ed_head 
-                       + heads_child+duration_village 
-                       + num_ppl_hh + tajik + farsi , data = afghan))
+treat_test.adv <- (lm( test_score_normalized ~ treatment+ nearest_scl +  
+                         girl*age_child  + age_head + num_sheep + jeribs + 
+                         yrs_ed_head + heads_child + duration_village 
+                       + num_ppl_hh + tajik + farsi + farmer + chagcharan
+                         , data = afghan))
 treat_test_girl.adv <- (lm( test_score_normalized ~ treatment + treatment*girl
-                            + nearest_scl + age_child + age_head 
-                            + num_sheep + jeribs + yrs_ed_head 
-                            + heads_child+duration_village 
-                            + num_ppl_hh + tajik + farsi, data = afghan))
-treat_test.adv_clus <- (lm( test_score_normalized ~ treatment+ nearest_scl 
-                       + girl + age_child + age_head 
-                       + num_sheep + jeribs + yrs_ed_head 
-                       + heads_child+duration_village 
-                       + num_ppl_hh + tajik + farsi + as.factor(clustercode)
+                            + nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer + chagcharan, data = afghan))
+treat_test.adv_clus <- (lm( test_score_normalized ~ treatment+ nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer + as.factor(clustercode)
                        , data = afghan))
 treat_test_girl.adv_clus <- (lm( test_score_normalized ~ treatment + treatment*girl
-                            + nearest_scl + age_child + age_head 
-                            + num_sheep + jeribs + yrs_ed_head 
-                            + heads_child+duration_village 
-                            + num_ppl_hh + tajik + farsi+ as.factor(clustercode)
+                            + nearest_scl +  
+                              girl*age_child  + age_head + num_sheep + jeribs + 
+                              yrs_ed_head + heads_child + duration_village 
+                            + num_ppl_hh + tajik + farsi + farmer +  as.factor(clustercode)
                             , data = afghan))
 robust_se.treat_test <- sqrt(diag(vcovHC(treat_test, type = "HC1")))
 robust_se.treat_test_girl <- sqrt(diag(vcovHC(treat_test_girl, type = "HC1")))
