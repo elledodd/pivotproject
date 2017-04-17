@@ -3,8 +3,8 @@ title: "Appendix"
 output:
   pdf_document: default
   html_document: default
-  geometry: margin=0.2in
-  fontsize: 11pt
+  geometry: margin=0.1in
+  fontsize: 10pt
 ---
 
 ```{r setup, include=FALSE}
@@ -279,17 +279,14 @@ robust_se.treat_enrollment.adv_clus <- sqrt(diag(vcovHC(treat_enrollment.adv_clu
 robust_se.treat_enrollment_girl.adv_clus <- sqrt(diag(vcovHC(treat_enrollment_girl.adv_clus, type = "HC1")))
 
 stargazer(treat_enrollment,treat_enrollment_girl,treat_enrollment.adv,treat_enrollment_girl.adv,treat_enrollment.adv_clus,treat_enrollment_girl.adv_clus, 
-se = list(robust_se.treat_enrollment,robust_se.treat_enrollment_girl,robust_se.treat_enrollment.adv,robust_se.treat_enrollment_girl.adv
-          ,robust_se.treat_enrollment.adv_clus,robust_se.treat_enrollment_girl.adv_clus)
-          ,omit = "clustercode",
-          add.lines = list(
-          c("Cluster Fixed Effects?", "No", "No", "No", "No", "Yes", "Yes"),
+          se = list(robust_se.treat_enrollment, robust_se.treat_enrollment_girl, robust_se.treat_enrollment.adv, robust_se.treat_enrollment_girl.adv, robust_se.treat_enrollment.adv_clus,  robust_se.treat_enrollment_girl.adv_clus),
+          omit = "clustercode",
+          add.lines = list(c("Cluster Fixed Effects?", "No", "No", "No", "No", "Yes", "Yes")),
           omit.stat = c("f", "ser", "aic", "ll"),
-          title = "Effect of treatment on enrollment by gender",
           intercept.bottom = FALSE,
           header=FALSE,
-          summary=FALSE
-))
+          summary=FALSE,
+          title = "Treatment effects by gender")
 
 #test score ~ treatment
 treat_test <- (lm( test_score_normalized ~ treatment, data = afghan))
