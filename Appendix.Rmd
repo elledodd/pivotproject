@@ -70,7 +70,6 @@ attach(afghan)
 
 ```{r balance table}
 #Create Balance Table
-
 #create data frame of only the variables of interest
 remove <- c("hh_id", "observation_id")
 varlist <- colnames(afghan[,!names(afghan) %in% remove])
@@ -108,8 +107,12 @@ balance_test_pvals[] <- lapply(balance_test_pvals[], function(x) as.numeric(as.c
 balancetable<-cbind(balancetable,balance_test_pvals)
 balancetable<-round(balancetable,3)
 #Show table
-kable(balancetable)
+```
 
+\break
+
+``` {r}
+kable(balancetable, caption = "Balance Table")
 ```
 
 ```{r attrition}
@@ -125,7 +128,7 @@ sd <- sapply(sum_list, sd, na.rm = T)
 sum_table<-cbind(n,mean,sd)
 sum_table<-round(sum_table,digits=3)
 rownames(sum_table) <- c('% Test Taken - All','% Test Taken - Treatment', '% Test Taken - Control')
-kable(sum_table)
+kable(sum_table, caption = "Summary Table")
 
 #creating a dataset of only the attritted
 afghanattrition <- afghan[!complete.cases(afghan),]
@@ -152,7 +155,7 @@ attrition_table <- attrition_table[,-c(1)]
 attrition_table <- data.frame(attrition_table, stringsAsFactors=FALSE)
 attrition_table[] <- lapply(attrition_table, function(x) as.numeric(as.character(x)))
 rownames(attrition_table) <- varlist[c(1:12,16:18,20:21)]
-kable (attrition_table)
+kable (attrition_table, caption = "Attrition Table")
 ```
 
 ```{r, eval = FALSE}
@@ -203,7 +206,7 @@ stargazer(p2, p3,
 
 ```{r plot models against each other to compare predictions}
 #compare predictions
-plot(predict(r2, type="response"), predict(p2, type="response"), xlab = "linear model", ylab = "probit model")
+plot(predict(r2, type="response"), predict(p2, type="response"), xlab = "linear model", ylab = "probit model", main = "Chart 1: Comparing probit and linear models")
 abline(a=0, b=1, col="red")
 ```
 
